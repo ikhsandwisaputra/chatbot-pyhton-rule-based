@@ -10,6 +10,23 @@
         body { font-family: 'Poppins', sans-serif; background-color: #f0f9ff; }
         .history-card { background-color: white; border-left: 5px solid #3b82f6; /* blue-500 */ }
         .history-card:nth-child(odd) { border-left-color: #10b981; /* emerald-500 */ }
+        .content-card { background-color: white; }
+        .btn-feature { transition: all 0.3s ease; }
+        .btn-feature:hover { transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .navbar { background-color: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+        /* Tambahan untuk transisi menu mobile */
+        #mobile-menu-links {
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            max-height: 0; /* Awalnya tinggi 0 */
+            opacity: 0; /* Awalnya transparan */
+            overflow: hidden; /* Sembunyikan konten yang melebihi max-height */
+        }
+        #mobile-menu-links.show-menu {
+            max-height: 500px; /* Atur tinggi maksimal yang cukup untuk semua link */
+            opacity: 1;
+        }
+        
+    </style>
         .navbar { background-color: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
     </style>
 </head>
@@ -17,15 +34,32 @@
     <nav class="navbar shadow-md sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4">
             <div class="flex justify-between items-center h-16">
-                <a href="{{ url_for('home') }}" class="text-2xl font-bold text-sky-600">VCare</a>
+                <div class="flex-shrink-0">
+                    <a href="{{ url_for('home') }}" class="text-2xl font-bold text-sky-600">VCare</a>
+                </div>
                 <div class="hidden md:flex items-center space-x-6">
                     <a href="{{ url_for('home') }}" class="text-gray-700 hover:text-sky-600 font-medium px-3 py-2 rounded-md">Beranda</a>
                     <a href="{{ url_for('mulai_diagnosa') }}" class="text-gray-700 hover:text-sky-600 font-medium px-3 py-2 rounded-md">Diagnosa Baru</a>
-                    <a href="{{ url_for('riwayat_diagnosa') }}" class="text-sky-600 font-semibold border-b-2 border-sky-600 px-3 py-2">Riwayat Diagnosa</a>
+                    <a href="{{ url_for('riwayat_diagnosa') }}" class="text-gray-700 hover:text-sky-600 font-medium px-3 py-2 rounded-md">Riwayat Diagnosa</a>
                     <a href="{{ url_for('chat_vcare_umum') }}" class="text-gray-700 hover:text-sky-600 font-medium px-3 py-2 rounded-md">Chat Umum</a>
                     <a href="{{ url_for('logout') }}" class="bg-red-500 hover:bg-red-600 text-white font-medium px-4 py-2 rounded-md shadow-sm">Logout</a>
                 </div>
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-button" class="text-gray-700 hover:text-sky-600 focus:outline-none focus:text-sky-600 p-2 rounded-md">
+                        <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                            <path id="menu-icon-open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            <path id="menu-icon-close" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" class="hidden" />
+                        </svg>
+                    </button>
+                </div>
             </div>
+        </div>
+        <div id="mobile-menu-links" class="md:hidden bg-white shadow-lg">
+            <a href="{{ url_for('home') }}" class="block text-gray-700 hover:bg-sky-100 hover:text-sky-600 px-4 py-3 font-medium">Beranda</a>
+            <a href="{{ url_for('mulai_diagnosa') }}" class="block text-gray-700 hover:bg-sky-100 hover:text-sky-600 px-4 py-3 font-medium">Diagnosa Baru</a>
+            <a href="{{ url_for('riwayat_diagnosa') }}" class="block text-gray-700 hover:bg-sky-100 hover:text-sky-600 px-4 py-3 font-medium">Riwayat Diagnosa</a>
+            <a href="{{ url_for('chat_vcare_umum') }}" class="block text-gray-700 hover:bg-sky-100 hover:text-sky-600 px-4 py-3 font-medium">Chat Umum</a>
+            <a href="{{ url_for('logout') }}" class="block bg-red-500 text-white hover:bg-red-600 px-4 py-3 font-medium text-center">Logout</a>
         </div>
     </nav>
 
@@ -92,5 +126,21 @@
             {% endif %}
         </div>
     </main>
+
+     <script>
+        const menuButton = document.getElementById('mobile-menu-button');
+        const menuLinks = document.getElementById('mobile-menu-links');
+        const menuIconOpen = document.getElementById('menu-icon-open');
+        const menuIconClose = document.getElementById('menu-icon-close');
+
+        menuButton.addEventListener('click', () => {
+            // Toggle class 'show-menu' untuk animasi
+            menuLinks.classList.toggle('show-menu');
+            
+            // Ganti ikon hamburger dengan silang dan sebaliknya
+            menuIconOpen.classList.toggle('hidden');
+            menuIconClose.classList.toggle('hidden');
+        });
+    </script>
 </body>
 </html>
