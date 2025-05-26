@@ -1,2 +1,0 @@
-apt install python3-virtualenv
-apt install python3-flask
