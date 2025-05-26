@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - VCare</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style> body { font-family: 'Poppins', sans-serif; background-color: #f3e8ff; } </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-md">
+        <h2 class="text-2xl sm:text-3xl font-bold text-center text-violet-700 mb-8">Masuk ke Akun Anda</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="p-3 mb-4 rounded-md text-sm 
+                        {% if category == 'danger' %} bg-red-100 text-red-700 
+                        {% elif category == 'success' %} bg-green-100 text-green-700
+                        {% elif category == 'info' %} bg-blue-100 text-blue-700 
+                        {% else %} bg-yellow-100 text-yellow-700 {% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('login') }}" class="space-y-5">
+            <div>
+                <label for="identifier" class="block text-sm font-medium text-gray-700 mb-1">Nama Pengguna / Email / NIM</label>
+                <input type="text" name="identifier" id="identifier" required
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                       placeholder="Masukkan nama/email/NIM">
+            </div>
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" name="password" id="password" required
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                       placeholder="Masukkan password Anda">
+            </div>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <input id="remember" name="remember" type="checkbox" class="h-4 w-4 text-violet-600 focus:ring-violet-500 border-gray-300 rounded">
+                    <label for="remember" class="ml-2 block text-sm text-gray-900">Ingat saya</label>
+                </div>
+                </div>
+            <div>
+                <button type="submit"
+                        class="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 transition-transform hover:scale-105">
+                    Masuk
+                </button>
+            </div>
+        </form>
+        <p class="text-center text-sm text-gray-600 mt-8">
+            Belum punya akun? <a href="{{ url_for('register') }}" class="font-medium text-violet-600 hover:text-violet-500">Daftar di sini</a>
+        </p>
+    </div>
+</body>
+</html>

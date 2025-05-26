@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - VCare</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #f0f9ff; /* sky-50 */ }
+        .content-card { background-color: white; }
+        .btn-feature { transition: all 0.3s ease; }
+        .btn-feature:hover { transform: translateY(-4px) scale(1.03); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .navbar { background-color: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="min-h-screen">
+    <nav class="navbar shadow-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0">
+                    <a href="{{ url_for('home') }}" class="text-2xl font-bold text-sky-600">VCare</a>
+                </div>
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="{{ url_for('home') }}" class="text-gray-700 hover:text-sky-600 font-medium px-3 py-2 rounded-md">Beranda</a>
+                    <a href="{{ url_for('mulai_diagnosa') }}" class="text-gray-700 hover:text-sky-600 font-medium px-3 py-2 rounded-md">Diagnosa Baru</a>
+                    <a href="{{ url_for('riwayat_diagnosa') }}" class="text-gray-700 hover:text-sky-600 font-medium px-3 py-2 rounded-md">Riwayat Diagnosa</a>
+                    <a href="{{ url_for('chat_vcare_umum') }}" class="text-gray-700 hover:text-sky-600 font-medium px-3 py-2 rounded-md">Chat Umum</a>
+                    <a href="{{ url_for('logout') }}" class="bg-red-500 hover:bg-red-600 text-white font-medium px-4 py-2 rounded-md shadow-sm">Logout</a>
+                </div>
+                </div>
+        </div>
+    </nav>
+
+    <main class="py-10">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="p-4 mb-6 rounded-lg text-base 
+                            {% if category == 'danger' %} bg-red-100 border border-red-400 text-red-700
+                            {% elif category == 'success' %} bg-green-100 border border-green-400 text-green-700
+                            {% elif category == 'info' %} bg-blue-100 border border-blue-400 text-blue-700
+                            {% else %} bg-yellow-100 border border-yellow-400 text-yellow-700 {% endif %}" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="content-card p-8 rounded-xl shadow-xl text-center">
+                <img src="https://placehold.co/120x120/38bdf8/FFFFFF?text=VC%2B" alt="VCare Logo" class="w-28 h-28 mx-auto mb-6 rounded-full shadow-lg">
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-3">Selamat Datang Kembali, {{ current_user.nama }}!</h1>
+                <p class="text-xl text-gray-600 mb-10">Pilih layanan VCare yang Anda butuhkan.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <a href="{{ url_for('mulai_diagnosa') }}"
+                       class="block btn-feature bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-8 px-6 rounded-lg shadow-lg text-xl flex flex-col items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                        🩺 Mulai Diagnosa Penyakit Lambung
+                    </a>
+                     <a href="{{ url_for('riwayat_diagnosa') }}"
+                       class="block btn-feature bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold py-8 px-6 rounded-lg shadow-lg text-xl flex flex-col items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                        📜 Lihat Riwayat Diagnosa
+                    </a>
+                    <a href="{{ url_for('chat_vcare_umum') }}"
+                       class="block btn-feature md:col-span-2 bg-gradient-to-r from-sky-400 to-indigo-400 hover:from-sky-500 hover:to-indigo-500 text-white font-semibold py-8 px-6 rounded-lg shadow-lg text-xl flex flex-col items-center justify-center">
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                        💬 Chat Umum VCare
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
