@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - VCare</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #eef2f7;
+        }
+        #chatBoxFC { /* Ganti ID jika perlu untuk konsistensi */
+            height: calc(100vh - 260px); 
+        }
+        @media (min-width: 768px) {
+            #chatBoxFC {
+                height: calc(100vh - 280px);
+            }
+        }
+        .chat-bubble { max-width: 80%; padding: 10px 15px; border-radius: 18px; margin-bottom: 8px; line-height: 1.5; word-wrap: break-word; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .user-bubble { background-color: #10b981; /* Warna hijau untuk user */ color: white; margin-left: auto; border-bottom-right-radius: 5px; }
+        .bot-bubble { background-color: #ffffff; color: #374151; margin-right: auto; border-bottom-left-radius: 5px; }
+        .options-button { transition: all 0.2s ease-in-out; }
+        .options-button:hover { transform: scale(1.05); filter: brightness(0.95); }
+        #chatBoxFC::-webkit-scrollbar { width: 8px; }
+        #chatBoxFC::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        #chatBoxFC::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        #chatBoxFC::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .progress-bar-container { background-color: #e5e7eb; border-radius: 9999px; overflow: hidden; }
+        .progress-bar { background-color: #14b8a6; /* Teal color for progress bar */ height: 100%; transition: width 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-2xl bg-white shadow-xl rounded-lg flex flex-col overflow-hidden">
+        <header class="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 text-white flex items-center space-x-3">
+            <a href="{{ url_for('index') }}" class="text-xl hover:opacity-75 transition-opacity">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+            </a>
+            <img src="https://placehold.co/40x40/FFFFFF/10B981?text=VC%2B" alt="VCare Logo" class="w-10 h-10 rounded-full border-2 border-white">
+            <div>
+                <h1 class="text-xl font-semibold">{{ title }}</h1>
+                <p class="text-xs opacity-80">VCare Assistant - Forward Chaining</p>
+            </div>
+        </header>
+
+        <div id="progressBarSection" class="p-3 bg-slate-50 border-b border-slate-200 {{ 'hidden' if mode != 'diagnosa_maag_fc' else '' }}">
+            <p id="progressText" class="text-sm text-slate-600 mb-1 text-center">Memulai diagnosa...</p>
+            <div class="progress-bar-container w-full h-2.5">
+                <div id="progressBar" class="progress-bar" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <div id="chatBoxFC" class="flex-grow p-4 space-y-3 overflow-y-auto bg-slate-100">
+            <div class="chat-bubble bot-bubble"><p>{{ initial_message }}</p></div>
+            <div class="chat-bubble bot-bubble" id="initialBotMessageContainerFC"><p>{{ initial_bot_message | safe }}</p></div>
+        </div>
+
+        <div id="interactionArea" class="p-3 bg-white border-t border-slate-200">
+            <div id="diagnosaOptionsContainer" class="flex justify-around space-x-3 {{ 'hidden' if mode != 'diagnosa_maag_fc' else '' }}">
+                <button id="answerYesButton" class="options-button w-1/2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-lg shadow-sm">Ya</button>
+                <button id="answerNoButton" class="options-button w-1/2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-lg shadow-sm">Tidak</button>
+            </div>
+
+            <div id="generalChatInputContainer" class="flex items-center space-x-2 {{ 'hidden' if mode == 'diagnosa_maag_fc' else '' }}">
+                <input type="text" id="generalUserInput" placeholder="Ketik pesan Anda..." class="flex-grow p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow">
+                <button id="generalSendButton" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold p-3 rounded-lg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chatBoxFC'); // Sesuaikan ID
+        const mode = "{{ mode }}";
+        const totalGejala = parseInt("{{ total_gejala }}") || 0;
+
+        const diagnosaOptionsContainer = document.getElementById('diagnosaOptionsContainer');
+        const answerYesButton = document.getElementById('answerYesButton');
+        const answerNoButton = document.getElementById('answerNoButton');
+        const progressBarSection = document.getElementById('progressBarSection');
+        const progressText = document.getElementById('progressText');
+        const progressBar = document.getElementById('progressBar');
+
+        const generalChatInputContainer = document.getElementById('generalChatInputContainer');
+        const generalUserInput = document.getElementById('generalUserInput');
+        const generalSendButton = document.getElementById('generalSendButton');
+
+        let currentSymptomFrontendIndex = 0; 
+        let currentSymptomCode = '';
+        let userAnswers = {}; 
+
+        function appendMessageToChat(text, sender, isHtml = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('chat-bubble', sender === 'user' ? 'user-bubble' : 'bot-bubble');
+            if (isHtml) {
+                messageDiv.innerHTML = text.replace(/\n/g, '<br>');
+            } else {
+                messageDiv.textContent = text;
+            }
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        
+        async function fetchNextQuestionOrDiagnose(answeredSymptomCode = null, answerValue = null) {
+            if (mode !== 'diagnosa_maag_fc') return;
+            setInteractionLoading(true);
+
+            const payload = {
+                current_symptom_index: currentSymptomFrontendIndex, 
+                user_answers: userAnswers 
+            };
+
+            if (answeredSymptomCode !== null) {
+                payload.answered_symptom_code = answeredSymptomCode;
+                payload.answer_value = answerValue;
+            }
+            
+            try {
+                const response = await fetch("{{ url_for('proses_diagnosa_fc') }}", { // Panggil endpoint FC
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (data.is_finished) {
+                    appendMessageToChat(data.final_diagnosis, 'bot', true);
+                    diagnosaOptionsContainer.classList.add('hidden');
+                    progressText.textContent = "Diagnosa Selesai.";
+                    progressBar.style.width = '100%';
+                } else {
+                    appendMessageToChat(data.next_question_text, 'bot');
+                    currentSymptomCode = data.next_symptom_code;
+                    currentSymptomFrontendIndex = data.current_symptom_index; 
+                    userAnswers = data.user_answers; 
+                    progressText.textContent = data.progress;
+                    
+                    if (totalGejala > 0) { // Update progress bar width
+                        const percentage = (currentSymptomFrontendIndex / totalGejala) * 100;
+                        progressBar.style.width = Math.min(percentage, 100) + '%';
+                    }
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                appendMessageToChat("Maaf, terjadi kesalahan koneksi. Coba muat ulang.", 'bot');
+            } finally {
+                setInteractionLoading(false);
+            }
+        }
+        
+        function setInteractionLoading(isLoading) {
+            if (mode === 'diagnosa_maag_fc') {
+                answerYesButton.disabled = isLoading;
+                answerNoButton.disabled = isLoading;
+                answerYesButton.classList.toggle('opacity-50', isLoading);
+                answerNoButton.classList.toggle('opacity-50', isLoading);
+            } else if (mode === 'chat_vcare') {
+                generalUserInput.disabled = isLoading;
+                generalSendButton.disabled = isLoading;
+                generalSendButton.classList.toggle('opacity-50', isLoading);
+            }
+        }
+
+        async function handleDiagnosaAnswer(answerBool) {
+            const answerText = answerBool ? "Ya" : "Tidak";
+            appendMessageToChat(answerText, 'user');
+            fetchNextQuestionOrDiagnose(currentSymptomCode, answerBool);
+        }
+
+        async function handleGeneralChatSubmit() {
+            // Logika untuk chat umum (jika masih dipertahankan)
+            const message = generalUserInput.value.trim();
+            if (message === "") return;
+            appendMessageToChat(message, 'user');
+            generalUserInput.value = "";
+            setInteractionLoading(true);
+            try {
+                const response = await fetch("{{ url_for('proses_chat_umum') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                const data = await response.json();
+                appendMessageToChat(data.bot_reply, 'bot', true);
+            } catch (error) {
+                console.error("Error:", error);
+                appendMessageToChat("Maaf, ada masalah koneksi.", 'bot');
+            } finally {
+                setInteractionLoading(false);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (mode === 'diagnosa_maag_fc') {
+                diagnosaOptionsContainer.classList.remove('hidden');
+                generalChatInputContainer.classList.add('hidden');
+                progressBarSection.classList.remove('hidden');
+                answerYesButton.addEventListener('click', () => handleDiagnosaAnswer(true));
+                answerNoButton.addEventListener('click', () => handleDiagnosaAnswer(false));
+                fetchNextQuestionOrDiagnose(); // Meminta pertanyaan pertama
+
+                // Inisialisasi progress bar awal
+                if (totalGejala > 0) {
+                    progressBar.style.width = '0%';
+                    progressText.textContent = `Pertanyaan 1 dari ${totalGejala}`;
+                }
+
+
+            } else if (mode === 'chat_vcare') {
+                diagnosaOptionsContainer.classList.add('hidden');
+                generalChatInputContainer.classList.remove('hidden');
+                progressBarSection.classList.add('hidden');
+                generalSendButton.addEventListener('click', handleGeneralChatSubmit);
+                generalUserInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') handleGeneralChatSubmit();
+                });
+                generalUserInput.focus();
+            }
+        });
+    </script>
+</body>
+</html>
