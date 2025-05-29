@@ -1,6 +1,4 @@
 # app.py
-from dotenv import load_dotenv
-load_dotenv()
 from flask import (Flask, render_template, request, jsonify,
                    redirect, url_for, flash, session)
 from flask_sqlalchemy import SQLAlchemy
@@ -8,46 +6,27 @@ from flask_login import (LoginManager, UserMixin, login_user, logout_user,
                          login_required, current_user)
 from flask_bcrypt import Bcrypt
 import datetime # Untuk tanggal lahir dan timestamp riwayat
-import json
-import os # <-- TAMBAHKAN INI untuk environment variables
-
+import json # <--- PASTIKAN BARIS INI ADA DAN TIDAK DIKOMENTARI
 app = Flask(__name__)
 
 # KONEKSI KE DATABASE
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'kunci_rahasia_yang_sangat_aman_bro_default') # Ganti dengan kunci rahasia yang kuat
-
-# --- PERUBAHAN UTAMA DI SINI ---
-# Ganti koneksi SQLite dengan koneksi PostgreSQL Supabase
-# Pastikan kamu sudah set SUPABASE_DB_URL di environment variables Railway atau lokalmu
-# Formatnya: postgresql://postgres:[YOUR-PASSWORD]@[AWS-REGION].supabase.co:[PORT]/postgres
-SUPABASE_DB_URL = os.environ.get('SUPABASE_DB_URL')
-if not SUPABASE_DB_URL:
-    # Fallback ke SQLite jika SUPABASE_DB_URL tidak diset (misalnya untuk development lokal tanpa Supabase)
-    # Kamu bisa hapus fallback ini jika selalu ingin menggunakan Supabase
-    print("PERINGATAN: SUPABASE_DB_URL tidak diset. Menggunakan fallback SQLite 'vcare_database.db'.")
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vcare_database.db'
-else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = SUPABASE_DB_URL
-# --- AKHIR PERUBAHAN UTAMA ---
-
+app.config['SECRET_KEY'] = 'kunci_rahasia_yang_sangat_aman_bro' # Ganti dengan kunci rahasia yang kuat
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vcare_database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
-login_manager.login_view = 'login'
+login_manager.login_view = 'login' # Halaman yang dituju jika user belum login dan mencoba akses halaman terproteksi
 login_manager.login_message_category = 'info'
 
 # === MODEL DATABASE ===
-# Model database (User, DiagnosaHistory) tetap sama, tidak perlu diubah
-# kecuali ada tipe data spesifik SQLite yang tidak kompatibel langsung dengan PostgreSQL,
-# tapi untuk modelmu saat ini (Integer, String, Text, Date, DateTime, ForeignKey) seharusnya aman.
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     nama = db.Column(db.String(150), nullable=False)
     nim = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False) # Bcrypt hash biasanya cukup panjang, String(128) masih ok
+    password_hash = db.Column(db.String(128), nullable=False)
     diagnosa_history = db.relationship('DiagnosaHistory', backref='pasien', lazy=True)
 
     def set_password(self, password):
@@ -62,9 +41,9 @@ class DiagnosaHistory(db.Model):
     nama_lengkap_pasien = db.Column(db.String(150), nullable=False)
     tanggal_lahir_pasien = db.Column(db.Date, nullable=False)
     jenis_kelamin_pasien = db.Column(db.String(20), nullable=False)
-    gejala_dialami_json = db.Column(db.Text, nullable=False) # Menyimpan gejala sebagai JSON string (Text cocok untuk PostgreSQL)
+    gejala_dialami_json = db.Column(db.Text, nullable=False) # Menyimpan gejala sebagai JSON string
     hasil_diagnosa_text = db.Column(db.Text, nullable=False)
-    tanggal_diagnosa = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow) # default timezone-aware bisa dipertimbangkan jika perlu
+    tanggal_diagnosa = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -100,7 +79,7 @@ rules_fc = [
     {"rule_id": "RL7", "if_gejala": ["SP01", "SP02", "SP03", "SP04", "SP05", "SP08", "SP22", "SP24", "SP18"], "then_penyakit": "DS07"}
 ]
 
-# === ROUTES AUTENTIKASI (Tidak ada perubahan, tetap sama) ===
+# === ROUTES AUTENTIKASI ===
 @app.route('/')
 def landing_page():
     if current_user.is_authenticated:
@@ -139,9 +118,10 @@ def register():
             flash('Registrasi berhasil! Silakan login.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
-            db.session.rollback() 
+            db.session.rollback() # Penting untuk rollback jika commit gagal atau ada error lain
             flash(f'Terjadi kesalahan saat membuat akun: {str(e)}', 'danger')
-            print(f"Error during registration: {e}") 
+            print(f"Error during registration: {e}") # Untuk log di server
+            # Kembali ke halaman register agar user bisa coba lagi
             return render_template('register.html', title="Daftar Akun") 
     return render_template('register.html', title="Daftar Akun")
 
@@ -150,7 +130,7 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     if request.method == 'POST':
-        identifier = request.form.get('identifier') 
+        identifier = request.form.get('identifier') # Bisa nama, email, atau NIM
         password = request.form.get('password')
         
         user = User.query.filter((User.nama == identifier) | (User.email == identifier) | (User.nim == identifier)).first()
@@ -171,7 +151,7 @@ def logout():
     flash('Anda telah logout.', 'info')
     return redirect(url_for('landing_page'))
 
-# === ROUTES UTAMA SETELAH LOGIN (Tidak ada perubahan, tetap sama) ===
+# === ROUTES UTAMA SETELAH LOGIN ===
 @app.route('/home')
 @login_required
 def home():
@@ -190,15 +170,15 @@ def mulai_diagnosa():
             return redirect(url_for('mulai_diagnosa'))
         
         try:
-            # Validasi format tanggal tetap penting
-            datetime.datetime.strptime(tanggal_lahir_str, '%Y-%m-%d').date()
+            tanggal_lahir_obj = datetime.datetime.strptime(tanggal_lahir_str, '%Y-%m-%d').date()
         except ValueError:
             flash('Format tanggal lahir tidak valid. Gunakan YYYY-MM-DD.', 'danger')
             return redirect(url_for('mulai_diagnosa'))
 
+        # Simpan data diri pasien di session untuk digunakan nanti saat menyimpan riwayat
         session['data_pasien_diagnosa'] = {
             'nama_lengkap': nama_lengkap,
-            'tanggal_lahir': tanggal_lahir_str, 
+            'tanggal_lahir': tanggal_lahir_str, # Simpan sbg string untuk kemudahan
             'jenis_kelamin': jenis_kelamin
         }
         return redirect(url_for('chat_diagnosa_fc'))
@@ -213,22 +193,22 @@ def chat_diagnosa_fc():
         flash('Silakan isi data diri pasien terlebih dahulu.', 'warning')
         return redirect(url_for('mulai_diagnosa'))
 
-    mode = 'diagnosa_maag_fc'
+    mode = 'diagnosa_maag_fc' # Mode sudah pasti ini
     title = "Diagnosa Penyakit Lambung (Forward Chaining)"
     initial_bot_message = ("Saya akan membantu Anda melakukan diagnosa awal penyakit lambung. "
                            "Jawablah pertanyaan berikut dengan 'Ya' atau 'Tidak'.")
     
-    return render_template('chat_fc.html', 
+    return render_template('chat_fc.html', # Menggunakan template chat_fc.html
                            title=title,
                            mode=mode,
-                           initial_message="Memulai sesi diagnosa...",
+                           initial_message="Memulai sesi diagnosa...", # Pesan awal bisa disesuaikan
                            initial_bot_message=initial_bot_message,
                            total_gejala=len(gejala_list_fc)
                            )
 
 @app.route('/proses_diagnosa_fc', methods=['POST'])
 @login_required
-def proses_diagnosa_fc_endpoint(): 
+def proses_diagnosa_fc_endpoint(): # Ganti nama fungsi agar tidak konflik
     if 'data_pasien_diagnosa' not in session:
         return jsonify({'error': 'Data pasien tidak ditemukan di sesi. Harap isi form data diri.'}), 400
 
@@ -256,7 +236,8 @@ def proses_diagnosa_fc_endpoint():
             'progress': f"Pertanyaan {index_untuk_pertanyaan_selanjutnya + 1} dari {len(gejala_list_fc)}"
         })
     else:
-        user_confirmed_symptoms_dict = {k:v for k,v in user_answers.items() if v}
+        user_confirmed_symptoms_dict = {k:v for k,v in user_answers.items() if v} # Hanya gejala yg True
+        
         user_confirmed_symptoms = set(user_confirmed_symptoms_dict.keys())
 
         diagnosed_diseases_codes = set()
@@ -284,6 +265,7 @@ def proses_diagnosa_fc_endpoint():
             "Untuk diagnosa yang akurat dan penanganan yang tepat, silakan kunjungi dokter."
         )
 
+        # Simpan ke database
         data_pasien = session['data_pasien_diagnosa']
         try:
             tgl_lahir = datetime.datetime.strptime(data_pasien['tanggal_lahir'], '%Y-%m-%d').date()
@@ -291,23 +273,26 @@ def proses_diagnosa_fc_endpoint():
             gejala_dialami_untuk_db = {
                 gejala_map_fc[kode]: "Ya" for kode, dialami in user_answers.items() if dialami
             }
+            # Atau bisa simpan user_answers langsung jika ingin semua gejala (Ya/Tidak)
+            # gejala_dialami_untuk_db = user_answers
 
             riwayat = DiagnosaHistory(
                 user_id=current_user.id,
                 nama_lengkap_pasien=data_pasien['nama_lengkap'],
                 tanggal_lahir_pasien=tgl_lahir,
                 jenis_kelamin_pasien=data_pasien['jenis_kelamin'],
-                gejala_dialami_json=json.dumps(gejala_dialami_untuk_db), 
+                gejala_dialami_json=json.dumps(gejala_dialami_untuk_db), # Simpan gejala yang "Ya" dan namanya
                 hasil_diagnosa_text=hasil_diagnosa_text
             )
             db.session.add(riwayat)
             db.session.commit()
-            session.pop('data_pasien_diagnosa', None) 
+            session.pop('data_pasien_diagnosa', None) # Hapus data pasien dari sesi setelah disimpan
             flash('Diagnosa berhasil disimpan ke riwayat Anda.', 'success')
         except Exception as e:
             db.session.rollback()
-            print(f"Error saat menyimpan riwayat: {e}") 
+            print(f"Error saat menyimpan riwayat: {e}") # Untuk debugging server
             flash('Gagal menyimpan diagnosa ke riwayat. Silakan coba lagi.', 'danger')
+
 
         return jsonify({'is_finished': True, 'final_diagnosis': hasil_diagnosa_text})
 
@@ -316,28 +301,35 @@ def proses_diagnosa_fc_endpoint():
 def riwayat_diagnosa():
     histories = DiagnosaHistory.query.filter_by(user_id=current_user.id).order_by(DiagnosaHistory.tanggal_diagnosa.desc()).all()
     
+    # Parse JSON gejala untuk ditampilkan
     for history in histories:
         try:
             history.gejala_parsed = json.loads(history.gejala_dialami_json)
         except json.JSONDecodeError:
-            history.gejala_parsed = {} 
+            history.gejala_parsed = {} # Atau pesan error
 
     return render_template('riwayat_diagnosa.html', title="Riwayat Diagnosa", histories=histories)
 
+
+# Endpoint untuk fitur chat umum (jika masih ada)
 @app.route('/chat_vcare_umum')
 @login_required
 def chat_vcare_umum():
+    # Halaman untuk chat umum, bisa mirip chat_fc.html tapi panggil endpoint lain
     return render_template('chat_fc.html',
                            title="Chat VCare Umum",
-                           mode="chat_vcare_umum", 
+                           mode="chat_vcare_umum", # mode baru
                            initial_message="Hallo! Ada yang bisa saya bantu?",
                            initial_bot_message="Silakan ketik pertanyaan Anda.",
-                           total_gejala=0 
+                           total_gejala=0 # Tidak ada progress bar gejala
                            )
 
 @app.route('/proses_chat_umum', methods=['POST'])
 @login_required
 def proses_chat_umum_endpoint():
+    # data = request.get_json()
+    # user_message = data.get('message', '')
+    # Logika balasan untuk chat umum
     return jsonify({
         'bot_reply': "Fitur chat umum VCare sedang dalam tahap pengembangan lebih lanjut. Terima kasih atas pesan Anda!",
     })
@@ -345,11 +337,5 @@ def proses_chat_umum_endpoint():
 
 if __name__ == '__main__':
     with app.app_context():
-        # PERHATIAN: Perintah db.create_all() akan membuat tabel berdasarkan modelmu
-        # JIKA tabel tersebut belum ada di database Supabase.
-        # Jika kamu sudah punya tabel di Supabase dengan struktur yang berbeda,
-        # ini bisa error atau tidak sesuai harapan.
-        # Pastikan skema di Supabase (jika sudah ada) cocok dengan model Flask-SQLAlchemy mu.
-        # Jika ini adalah setup baru, db.create_all() akan membuatkan tabelnya untukmu.
-        db.create_all() 
-    app.run(debug=True) # Set debug=False untuk produksi di Railway
+        db.create_all() # Membuat tabel database jika belum ada
+    app.run(debug=True)
