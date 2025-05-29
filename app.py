@@ -15,19 +15,7 @@ app = Flask(__name__)
 
 # KONEKSI KE DATABASE
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'kunci_rahasia_yang_sangat_aman_bro_default') # Ganti dengan kunci rahasia yang kuat
-
-# --- PERUBAHAN UTAMA DI SINI ---
-# Ganti koneksi SQLite dengan koneksi PostgreSQL Supabase
-# Pastikan kamu sudah set SUPABASE_DB_URL di environment variables Railway atau lokalmu
-# Formatnya: postgresql://postgres:[YOUR-PASSWORD]@[AWS-REGION].supabase.co:[PORT]/postgres
-SUPABASE_DB_URL = os.environ.get('SUPABASE_DB_URL')
-if not SUPABASE_DB_URL:
-    # Fallback ke SQLite jika SUPABASE_DB_URL tidak diset (misalnya untuk development lokal tanpa Supabase)
-    # Kamu bisa hapus fallback ini jika selalu ingin menggunakan Supabase
-    print("PERINGATAN: SUPABASE_DB_URL tidak diset. Menggunakan fallback SQLite 'vcare_database.db'.")
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vcare_database.db'
-else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = SUPABASE_DB_URL
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SUPABASE_DB_URL')
 # --- AKHIR PERUBAHAN UTAMA ---
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -344,12 +332,12 @@ def proses_chat_umum_endpoint():
 
 
 if __name__ == '__main__':
-    with app.app_context():
+    # with app.app_context():
         # PERHATIAN: Perintah db.create_all() akan membuat tabel berdasarkan modelmu
         # JIKA tabel tersebut belum ada di database Supabase.
         # Jika kamu sudah punya tabel di Supabase dengan struktur yang berbeda,
         # ini bisa error atau tidak sesuai harapan.
         # Pastikan skema di Supabase (jika sudah ada) cocok dengan model Flask-SQLAlchemy mu.
         # Jika ini adalah setup baru, db.create_all() akan membuatkan tabelnya untukmu.
-        db.create_all() 
+        # db.create_all() 
     app.run(debug=True) # Set debug=False untuk produksi di Railway
