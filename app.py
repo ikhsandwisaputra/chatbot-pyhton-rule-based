@@ -353,8 +353,8 @@ def cari_faskes():
 
     params = {
         "engine": "google_maps",
-        "q": "rs | sakit | puskesmas | klinik | apotek | dokter | umum | rsud",
-        "ll": f"@{lat},{lon},14z",
+        "q": "sakit | puskesmas | klinik | apotek | dokter | prakter | rsud",
+        "ll": f"@{lat},{lon},16z",
         "hl": "id",
         "api_key": serpapi_key
     }
