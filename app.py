@@ -9,7 +9,10 @@ from flask_login import (LoginManager, UserMixin, login_user, logout_user,
 from flask_bcrypt import Bcrypt
 import datetime # Untuk tanggal lahir dan timestamp riwayat
 import json
-import os # <-- TAMBAHKAN INI untuk environment variables
+from serpapi import GoogleSearch
+import os # Seharusnya sudah ada
+import requests # <-- TAMBAHKAN INI
+
 
 app = Flask(__name__)
 
@@ -331,6 +334,83 @@ def proses_chat_umum_endpoint():
     })
 
 
+# app.py
+
+@app.route('/cari-faskes')
+@login_required
+def cari_faskes():
+    lat = request.args.get('lat')
+    lon = request.args.get('lon')
+
+    if not lat or not lon:
+        flash('Koordinat lokasi tidak ditemukan.', 'danger')
+        return redirect(url_for('dashboard')) 
+
+    serpapi_key = os.getenv('SERPAPI_API_KEY')
+    if not serpapi_key:
+        flash('Kunci API SerpApi tidak dikonfigurasi.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    params = {
+        "engine": "google_maps",
+        "q": "rumah sakit | puskesmas | klinik | apotek | dokter | praktek umum",
+        # "ll": f"@{-0.1286759},{102.1567432},17z",
+        "ll": f"@{lat},{lon},15z",
+        "hl": "id",
+        "api_key": serpapi_key
+    }
+
+    # --- MULAI BLOK DEBUGGING ---
+    print("\n--- DEBUGGING PENCARIAN SERPAPI ---")
+    print(f"Parameter yang dikirim: {params}")
+    # --------------------------------
+
+    places = []
+    try:
+        search = GoogleSearch(params)
+        results_dict = search.get_dict()
+
+        # --- BLOK DEBUGGING PALING PENTING ---
+        print("\n--- HASIL MENTAH DARI SERPAPI ---")
+        import json
+        print(json.dumps(results_dict, indent=2)) # Mencetak JSON dengan format rapi
+        print("------------------------------------")
+        # --------------------------------------
+
+        # Cek jika ada error di dalam respons SerpApi
+        if 'error' in results_dict:
+            print(f"Error dari SerpApi: {results_dict['error']}")
+            raise Exception(results_dict['error'])
+
+        local_results = results_dict.get('local_results', [])
+        
+        for result in local_results:
+            place_id = result.get('place_id')
+            place_name = result.get('title')
+            maps_url = f"https://www.google.com/maps/search/?api=1&query={place_name}&query_place_id={place_id}"
+
+            places.append({
+                'name': place_name,
+                'address': result.get('address'),
+                'rating': result.get('rating'),
+                'reviews': result.get('reviews'),
+                'type': result.get('type'),
+                'thumbnail': result.get('thumbnail'),
+                'maps_url': maps_url
+            })
+
+    except Exception as e:
+        print(f"ERROR: Terjadi kesalahan saat memproses permintaan SerpApi: {e}")
+        # Jangan tampilkan flash message di sini agar kita bisa lihat halaman kosong
+        # flash('Terjadi kesalahan saat mencoba mengambil data.', 'danger')
+    
+    # Render template seperti biasa
+    return render_template('hasil_faskes.html', 
+                           places=places, 
+                           user_lat=lat, 
+                           user_lon=lon)
+
+
 if __name__ == '__main__':
     # with app.app_context():
         # PERHATIAN: Perintah db.create_all() akan membuat tabel berdasarkan modelmu
@@ -340,4 +420,4 @@ if __name__ == '__main__':
         # Pastikan skema di Supabase (jika sudah ada) cocok dengan model Flask-SQLAlchemy mu.
         # Jika ini adalah setup baru, db.create_all() akan membuatkan tabelnya untukmu.
         # db.create_all() 
-    app.run(debug=True) # Set debug=False untuk produksi di Railway
+    app.run(host='0.0.0.0', port=5000, debug=True)

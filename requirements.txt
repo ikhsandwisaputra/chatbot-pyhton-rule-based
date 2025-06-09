@@ -5,3 +5,6 @@ Flask-Bcrypt
 gunicorn
 psycopg2-binary
 dotenv
+requests
+google-search-results
+SQLAlchemy<2.0
